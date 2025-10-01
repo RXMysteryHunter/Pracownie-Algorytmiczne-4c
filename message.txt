@@ -1,0 +1,151 @@
+
+// main.jsx
+import { createRoot } from 'react-dom/client'
+import { BrowserRouter, Routes, Route } from 'react-router-dom' import App from './App'
+import Home from './pages/Home
+import Products from './pages/Products'
+import ProductDetails from './pages/ProductDetails'
+createRoot(document.getElementById("root")).render(
+<Browser Router>
+<Routes>
+<Route path="/" element={<App />}> {/** layout + <Outlet/> **/} <Route index element={<Home />} />
+<Route path="products" element={<Products />} />
+<Route path="products/:id" element={<ProductDetails />} /> <Route path="** element={<h1>484</h1>} />
+</Route>
+</Routes>
+</BrowserRouter>
+
+
+
+// main.jsx
+import { createRoot } from 'react-dom/client' import {
+createBrowserRouter,
+RouterProvider,
+} from 'react-router-don'
+import Layout from './components/Layout'
+import Home from './pages/Home
+import Products, { loader as productsLoader } from './pages/Products'
+import Product Details, { loader as productLoader } from './pages/ProductDetails' import ErrorPage from './pages/ErrorPage'
+const router = createBrowser Router([
+{
+},
+path: '/',
+element: <Layout />, // zawiera <Outlet/>
+errorElement: <ErrorPage />, // obsługa błędów loaderów/akcji
+children: [
+{ index: true, element: <Home /> },
+{ path: 'products', element: <Products />, loader: productsLoader },
+{ path: 'products/:id', element: <ProductDetails />, loader: productLoader }, { path: '*', element: <h1>484</h1> },
+])
+createRoot(document.getElementById('root')).render( <RouterProvider router={router} />
+
+
+
+    
+// nawigacja w Layout.jsx
+import { NavLink, Outlet } from 'react-router-dom export default function Layout(){
+return ( <div>
+<nav>
+<NavLink to="/">Start</NavLink>
+<NavLink
+to="/products">Produkty</NavLink>
+</nav>
+<main><Outlet/></main>
+</div>
+>
+Styl aktywnego linku:
+<NavLink
+to="/products"
+className={({ isActive }) => isActive ? 'active' : undefined}
+Produkty </NavLink>
+5) Parametry ścieżki: useParams()
+// /products/:id
+import { useParams } from 'react-router-dom' export default function ProductDetails(){
+}
+const { id } = useParams() // np. "42"
+return <h2>Szczegóły produktu #{id}</h2>
+
+
+
+import { useSearchParams } from 'react-router-dom' export default function Products(){
+const [params, setParams] = useSearchParams() const q=params.get('q') ?? ''
+// ...filtruj dane po q
+return (
+<>
+<input
+/>
+value={q}
+onChange={e => setParams({ q: e.target.value })}
+placeholder="Szukaj..."
+{/* lista wyników */}
+</>
+Wzorce:
+• Przechowuj filtr/sort w URL, aby był linkowalny.
+• Uważaj na nadpisywanie innych parametrów (setParams można łączyć z istniejącymi). 7) Nawigacja programowa: useNavigate()
+import { useNavigate } from 'react-router-dom'
+export default function Form(){
+const navigate = useNavigate()
+function handleSubmit(){
+}
+// ...zapis danych
+navigate('/success', { replace: true, state: { from: 'form' } })
+return <button onClick={handleSubmit}>Wyślij</button>
+}
+
+
+
+
+<Route path="/" element={<Layout/>}>
+<Route index element={<Home/>} />
+<Route path="products" element={<Products/>} />
+<Route path="products/:id" element={<ProductDetails/>} /> </Route>
+Index route to domyślna zawartość danego segmentu.
+Outlet context
+Przekazuj dane z layoutu do dzieci:
+// Layout.jsx
+import { Outlet } from 'react-router-dom'
+export default function Layout(){
+}
+const user = { name: 'Ala' }
+return <Outlet context={{ user }} />
+// dzieci
+import { useOutletContext } from 'react-router-dom' const { user } = useOutletContext()
+9) Data Router: loader, useLoaderData, action, Form
+Korzyści: deklaratywne ładowanie danych, obsługa błędów, mutacje formularzy.
+Loader -ładowanie danych przed renderem
+// pages/Products.jsx
+import { useLoaderData } from 'react-router-dom'
+export async function loader(){
+}
+const res = await fetch("/api/products.json')
+if(!res.ok) throw new Response('Błąd', { status: res.status }) return res.json()
+export default function Products(){
+}
+const products = useLoaderData()
+return products.map(p => <div key={p.id}>{p.name}</div>)
+
+
+
+import { lazy, Suspense } from 'react'
+const Products = lazy(() => import('./pages/Products'))
+<Route
+path="products"
+element={
+<Suspense
+fallback={<p>Ładowanie_</p>}>
+}
+<Products />
+</Suspense>
+W data routerach możesz użyć lazy: () => import("./routes/products") w definicji trasy.
+13) Ochrona tras (ProtectedRoute)
+A) Wariant prosty (klasyczny)
+}
+function RequireAuth({ children }}{
+const isAuth = !!localStorage.getItem("token")
+return isAuth? children: <Navigate to="/login" replace />
+<Route path="/dashboard" element={<RequireAuth><Dashboard/></RequireAuth>} />
+B) Wariant data-router (guard w loader)
+export async function privateLoader(){
+const token = localStorage.getItem("token') if(!token) throw redirect('/login') return null
+}
+{ path: 'dashboard', loader: privateLoader, element: <Dashboard/> }

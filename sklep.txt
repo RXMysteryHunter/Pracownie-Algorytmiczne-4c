@@ -1,0 +1,174 @@
+import React, { Suspense } from "react";
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Outlet,
+  NavLink,
+  Link,
+  Form,
+  useLoaderData,
+  useActionData,
+  useSearchParams,
+  useNavigation,
+  redirect,
+} from "react-router-dom";
+// --------------------- Layout ---------------------
+function Header() {
+  return (
+    <header>
+      <h1>Sklepik Lidlonka</h1>
+    </header>
+  );
+}
+function Footer() {
+  return <footer>© 2025 Lidlonka</footer>;
+}
+
+function Navigation() {
+  return (
+    <nav>
+      <NavLink to="/">Home</NavLink> |{" "}
+      <NavLink to="/products">Produkty</NavLink> |{" "}
+      <NavLink to="/cart">Koszyk</NavLink> |{" "}
+      <NavLink to="/admin">Admin</NavLink>
+    </nav>
+  );
+}
+function Layout() {
+  const navigation = useNavigation();
+
+  return (
+    <div>
+      <Header />
+      <Navigation />
+      {navigation.state === "loading" && <p>⏳ Ładowanie...</p>}
+      <main>
+        <Outlet />
+      </main>
+      <Footer />
+    </div>
+  );
+}
+// --------------------- Pages ---------------------
+function Home() {
+  return <h2>Witamy w sklepiku!</h2>;
+}
+
+export async function productsLoader() {
+  return [
+    { id: 1, name: "Chleb" },
+    { id: 2, name: "Mleko" },
+  ];
+}
+function Products() {
+  const products = useLoaderData();
+  return (
+    <div>
+      <h2>Lista produktów</h2>
+      <ul>
+        {products.map((p) => (
+          <li key={p.id}>
+            <Link to={/products/${p.id}}>{p.name}</Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+export async function productDetailsLoader({ params }) {
+  return { id: params.id, name: "Produkt " + params.id, opis: "Opis produktu" };
+}
+function ProductDetails() {
+  const product = useLoaderData();
+  return (
+    <div>
+      <h2>{product.name}</h2>
+      <p>{product.opis}</p>
+    </div>
+  );
+}
+export async function cartAction({ request }) {
+  const formData = await request.formData();
+  const action = formData.get("action");
+  return { success: true, action };
+}
+function Cart() {
+  const result = useActionData();
+  return (
+    <div>
+      <h2>Koszyk</h2>
+      <Form method="post">
+        <button type="submit" name="action" value="add">
+          Dodaj
+        </button>
+        <button type="submit" name="action" value="remove">
+          Usuń
+        </button>
+      </Form>
+      {result && <p>Akcja: {result.action}</p>}
+    </div>
+  );
+}
+function Search() {
+  const [params] = useSearchParams();
+  const query = params.get("q");
+  return (
+    <div>
+      <h2>Wyniki wyszukiwania</h2>
+      <p>Szukasz: {query}</p>
+    </div>
+  );
+}
+function Login() {
+  const handleLogin = () => {
+    localStorage.setItem("token", "123");
+    window.location.href = "/admin";
+  };
+  return (
+    <div>
+      <h2>Logowanie</h2>
+      <button onClick={handleLogin}>Zaloguj</button>
+    </div>
+  );
+}
+// --------------------- Admin (lazy) ---------------------
+const AdminPanel = React.lazy(() => Promise.resolve({ default: () => <h2>Panel administracyjny</h2> }));
+
+function isAuthenticated() {
+  return !!localStorage.getItem("token");
+}
+// --------------------- Router ---------------------
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Layout />,
+    errorElement: <h2>Coś poszło nie tak! (Error globalny)</h2>,
+    children: [
+      { index: true, element: <Home /> },
+      { path: "products", element: <Products />, loader: productsLoader },
+      { path: "products/:id", element: <ProductDetails />, loader: productDetailsLoader },
+      { path: "cart", element: <Cart />, action: cartAction },
+      { path: "search", element: <Search /> },
+      {
+        path: "admin",
+        element: (
+          <Suspense fallback={<p>Ładowanie panelu...</p>}>
+            <AdminPanel />
+          </Suspense>
+        ),
+        loader: async () => {
+          if (!isAuthenticated()) {
+            throw redirect("/login");
+          }
+          return null;
+        },
+      },
+      { path: "login", element: <Login /> },
+      { path: "*", element: <h2>Błąd 404-nie znaleziono strony</h2> },
+    ],
+  },
+]);
+// --------------------- Root App ---------------------
+export default function App() {
+  return <RouterProvider router={router} />;
+}
