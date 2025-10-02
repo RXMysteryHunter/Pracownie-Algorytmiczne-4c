@@ -1,0 +1,293 @@
+
+Mini-projekt: "Sklepik Lidlronka" — Rozwiązanie (przykładowe)
+===========================================================
+
+Opis ogólny
+----------
+To przykładowe rozwiązanie pokazuje strukturę aplikacji React + React Router (v6.4+),
+w której są: layout z Header/Footer, nawigacja, routy z loaderami, akcjami, ochrona
+dla /admin, search params i lazy loading.
+
+Struktura plików (proponowana)
+------------------------------
+src/
+  app/
+    App.jsx
+    routes.jsx
+  pages/
+    Home.jsx
+    ProductsList.jsx
+    ProductDetails.jsx
+    Cart.jsx
+    AdminPanel.jsx
+    Login.jsx
+    NotFound.jsx
+  components/
+    Header.jsx
+    Footer.jsx
+    ProductCard.jsx
+  api/
+    products.js
+  utils/
+    auth.js
+  index.jsx
+
+Przykładowe API (mock) - src/api/products.js
+-------------------------------------------
+export async function fetchProducts(query = '') {
+  // symulacja fetch
+  await new Promise(r => setTimeout(r, 300));
+  const all = [
+    { id: '1', name: 'Mleko', price: 3.5, category: 'napoje' },
+    { id: '2', name: 'Chleb', price: 2.5, category: 'pieczywo' },
+    { id: '3', name: 'Masło', price: 6.0, category: 'nabiał' },
+  ];
+  if (!query) return all;
+  return all.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
+}
+
+export async function fetchProductById(id) {
+  await new Promise(r => setTimeout(r, 200));
+  const map = {
+    '1': { id: '1', name: 'Mleko', description: 'Tłuste mleko 2L', price: 3.5 },
+    '2': { id: '2', name: 'Chleb', description: 'Chleb wiejski', price: 2.5 },
+    '3': { id: '3', name: 'Masło', description: 'Masło 200g', price: 6.0 },
+  };
+  const p = map[id];
+  if (!p) throw new Response("Nie znaleziono produktu", { status: 404 });
+  return p;
+}
+
+Przykładowa autoryzacja - src/utils/auth.js
+-------------------------------------------
+export function getToken() {
+  return localStorage.getItem('token');
+}
+export function isAdmin() {
+  return getToken() === 'admin-token';
+}
+
+Komponenty layout - Header/Footer (proste)
+------------------------------------------
+Header.jsx:
+import { NavLink } from 'react-router-dom';
+export default function Header() {
+  return (
+    <header>
+      <nav>
+        <NavLink to="/">Home</NavLink> |{" "}
+        <NavLink to="/products">Produkty</NavLink> |{" "}
+        <NavLink to="/cart">Koszyk</NavLink> |{" "}
+        <NavLink to="/admin">Admin</NavLink>
+      </nav>
+    </header>
+  );
+}
+
+Footer.jsx:
+export default function Footer() {
+  return <footer>© Sklepik Lidlronka</footer>;
+}
+
+Routing - src/app/routes.jsx
+----------------------------
+import React, { lazy, Suspense } from 'react';
+import { createBrowserRouter, redirect } from 'react-router-dom';
+import { getToken, isAdmin } from '../utils/auth';
+import { fetchProducts, fetchProductById } from '../api/products';
+import App from './App';
+import Home from '../pages/Home';
+import Login from '../pages/Login';
+import NotFound from '../pages/NotFound';
+
+const ProductsList = lazy(() => import('../pages/ProductsList'));
+const ProductDetails = lazy(() => import('../pages/ProductDetails'));
+const Cart = lazy(() => import('../pages/Cart'));
+const AdminPanel = lazy(() => import('../pages/AdminPanel'));
+
+export const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <App />,
+    errorElement: <NotFound />,
+    children: [
+      { index: true, element: <Home /> },
+
+      {
+        path: 'products',
+        element: (
+          <Suspense fallback={<div>Ładowanie listy produktów...</div>}>
+            <ProductsList />
+          </Suspense>
+        ),
+        loader: async ({ request }) => {
+          // użycie useSearchParams analog w loaderze od request
+          const url = new URL(request.url);
+          const q = url.searchParams.get('q') || '';
+          const list = await fetchProducts(q);
+          return { list };
+        }
+      },
+      {
+        path: 'products/:id',
+        element: (
+          <Suspense fallback={<div>Ładowanie szczegółów...</div>}>
+            <ProductDetails />
+          </Suspense>
+        ),
+        loader: async ({ params }) => {
+          const p = await fetchProductById(params.id);
+          return { product: p };
+        }
+      },
+      {
+        path: 'cart',
+        element: (
+          <Suspense fallback={<div>Ładowanie koszyka...</div>}>
+            <Cart />
+          </Suspense>
+        ),
+        action: async ({ request }) => {
+          // przykładowa akcja: dodaj/usuń z koszyka
+          const form = await request.formData();
+          const op = form.get('op'); // 'add' lub 'remove'
+          const id = form.get('id');
+          // operacje na localStorage lub in-memory
+          return { ok: true, op, id };
+        }
+      },
+      {
+        path: 'admin',
+        element: (
+          <Suspense fallback={<div>Ładowanie panelu admin...</div>}>
+            <AdminPanel />
+          </Suspense>
+        ),
+        loader: async () => {
+          // ochrona: sprawdź token; jeśli brak -> redirect do /login
+          if (!isAdmin()) {
+            throw redirect('/login');
+          }
+          // jeśli ok, pobierz dane admina
+          return { secret: 'sekretne dane admina' };
+        }
+      },
+      { path: 'login', element: <Login /> }
+    ]
+  }
+]);
+
+Przykładowe strony (skrócone)
+-----------------------------
+ProductsList.jsx (używa useLoaderData i useSearchParams):
+import { useLoaderData, useSearchParams, Link, Form } from 'react-router-dom';
+
+export default function ProductsList() {
+  const { list } = useLoaderData();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const q = searchParams.get('q') || '';
+
+  return (
+    <div>
+      <h1>Produkty</h1>
+      <Form method="get">
+        <input name="q" defaultValue={q} placeholder="Szukaj..." />
+        <button type="submit">Szukaj</button>
+      </Form>
+      <ul>
+        {list.map(p => (
+          <li key={p.id}>
+            <Link to={`/products/${p.id}`}>{p.name} — {p.price} zł</Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+ProductDetails.jsx (useLoaderData + action form do koszyka):
+import { useLoaderData, Form } from 'react-router-dom';
+export default function ProductDetails() {
+  const { product } = useLoaderData();
+  return (
+    <div>
+      <h2>{product.name}</h2>
+      <p>{product.description}</p>
+      <p>{product.price} zł</p>
+      <Form method="post" action="/cart">
+        <input type="hidden" name="id" value={product.id} />
+        <input type="hidden" name="op" value="add" />
+        <button type="submit">Dodaj do koszyka</button>
+      </Form>
+    </div>
+  );
+}
+
+Cart.jsx (skrócone):
+import { useFetcher, useNavigation } from 'react-router-dom';
+export default function Cart() {
+  const navigation = useNavigation();
+  // przykładowe pokazanie stanu pending
+  return (
+    <div>
+      <h1>Koszyk</h1>
+      {navigation.state === 'loading' || navigation.state === 'submitting' ? (
+        <p>Przetwarzam...</p>
+      ) : (
+        <p>Twoje produkty w koszyku</p>
+      )}
+    </div>
+  );
+}
+
+AdminPanel.jsx (lazy + loader protected):
+export default function AdminPanel() {
+  return (
+    <div>
+      <h1>Panel Admina</h1>
+      <p>Tylko dla zalogowanych adminów.</p>
+    </div>
+  );
+}
+
+Login.jsx (prosty):
+import { useNavigate } from 'react-router-dom';
+export default function Login() {
+  const nav = useNavigate();
+  function handleLogin() {
+    localStorage.setItem('token', 'admin-token');
+    nav('/admin');
+  }
+  return (
+    <div>
+      <h1>Login</h1>
+      <button onClick={handleLogin}>Zaloguj jako admin</button>
+    </div>
+  );
+}
+
+Obsługa błędów 404 i global errorElement
+---------------------------------------
+W routingu ustawiono errorElement na komponent NotFound. Można też w poszczególnych route'ach
+zwracać Response z odpowiednim statusem (np. 404) i obsługiwać to w komponencie błędu.
+
+Lazy loading i fallbacky
+------------------------
+Użyto React.lazy + Suspense dla stron: ProductsList, ProductDetails, Cart, AdminPanel.
+Fallbacky są prostymi elementami informującymi o ładowaniu.
+
+Dodatkowe wskazówki / kryteria
+------------------------------
+- Nawigacja: użyj NavLink, aby mieć linki aktywne.
+- Loadery/akcje: w loaderach zwracaj obiekty; w action obsługuj formularze (Form).
+- Stan pending: użyj useNavigation() i pokazuj loader podczas submitting/loading.
+- Lazy loading: React.lazy + Suspense dla pagów; możesz również użyć lazy() z RR lazy.
+- Dla /search użyj useSearchParams (pokazane w ProductsList).
+- Dodaj lazy loading dla /admin (pokazane) i fallback.
+- Dodatkowo: obsługa błędów w loaderach: rzucaj Response, a globalny errorElement powinien to obsłużyć.
+
+Podsumowanie
+-----------
+To jest kompletny szkielet aplikacji z przykładami loaderów, akcji, ochroną route'u admin i użyciem
+useSearchParams oraz lazy loading. Możesz to rozszerzyć o bootstrap, kategorie i filtrowanie (zadanie na 02.10.2025).
+
