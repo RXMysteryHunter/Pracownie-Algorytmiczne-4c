@@ -1,0 +1,322 @@
+
+
+
+--------------------------
+{
+  "name": "sklepik-lidlronka",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.14.0"
+  },
+  "scripts": {
+    "start": "vite"
+  }
+}
+
+-----------------------------------
+/src
+  /components
+    Header.jsx
+    Footer.jsx
+    Nav.jsx
+    ErrorElement.jsx
+  /routes
+    Home.jsx
+    Products.jsx
+    ProductDetail.jsx
+    Cart.jsx
+    Admin.jsx
+    Login.jsx
+    Search.jsx
+  api.js
+  main.jsx
+  App.jsx
+  root.css
+
+
+-------------------------
+export async function fetchProducts(queryParams = '') {
+
+  const products = [
+    { id: '1', name: 'Chleb', price: 3.5, category: 'Piekarnia' },
+    { id: '2', name: 'Mleko', price: 2.0, category: 'Nabiał' },
+    { id: '3', name: 'Masło', price: 5.0, category: 'Nabiał' }
+  ];
+
+  return new Promise((res) => setTimeout(() => res(products), 300));
+}
+
+export async function fetchProductById(id) {
+  const all = await fetchProducts();
+  const p = all.find(x => x.id === id);
+  if (!p) throw new Response("Not Found", { status: 404 });
+  return p;
+}
+
+
+----------------------------
+import { NavLink } from 'react-router-dom';
+
+export default function Header() {
+  return (
+    <header>
+      <h1>Sklepik Lidlronka</h1>
+      <nav>
+        <NavLink to="/" end>Home</NavLink> |{' '}
+        <NavLink to="/products">Produkty</NavLink> |{' '}
+        <NavLink to="/cart">Koszyk</NavLink> |{' '}
+        <NavLink to="/admin">Admin</NavLink>
+      </nav>
+    </header>
+  );
+}
+
+
+----------------------------
+export default function Footer(){ return <footer>© Sklepik</footer>; }
+
+---------------------------------
+export default function ErrorElement({ error }) {
+  return (
+    <div>
+      <h2>Coś poszło nie tak</h2>
+      <pre>{error?.message || String(error)}</pre>
+    </div>
+  );
+}
+
+
+---------------
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import App from './App';
+import Home from './routes/Home';
+import Products, { productsLoader } from './routes/Products';
+import ProductDetail, { productLoader } from './routes/ProductDetail';
+import Cart, { cartAction } from './routes/Cart';
+import Login from './routes/Login';
+import ErrorElement from './components/ErrorElement';
+import './root.css';
+
+// lazy import Admin to show lazy loading
+const Admin = React.lazy(() => import('./routes/Admin'));
+
+// loader protecting admin: sprawdź token w loaderze i redirect do /login jeśli brak
+async function adminLoader() {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    // redirect
+    throw new Response("Unauthorized", { status: 401 });
+  }
+  return null;
+}
+
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <App/>,
+    errorElement: <ErrorElement/>,
+    children: [
+      { index: true, element: <Home/> },
+      { path: 'products', element: <Products/>, loader: productsLoader },
+      { path: 'products/:id', element: <ProductDetail/>, loader: productLoader },
+      { path: 'cart', element: <Cart/>, action: cartAction },
+      { path: 'login', element: <Login/> },
+      {
+        path: 'admin',
+        element: (
+          <React.Suspense fallback={<div>Ładowanie (admin)...</div>}>
+            <Admin/>
+          </React.Suspense>
+        ),
+        loader: adminLoader
+      },
+      { path: 'search', element: React.createElement(require('./routes/Search').default) }
+    ]
+  }
+]);
+
+createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <RouterProvider router={router}/>
+  </React.StrictMode>
+);
+
+
+-------------------------------
+import { Outlet } from 'react-router-dom';
+import Header from './components/Header';
+import Footer from './components/Footer';
+
+export default function App(){
+  return (
+    <>
+      <Header/>
+      <main><Outlet/></main>
+      <Footer/>
+    </>
+  );
+}
+
+
+----------------------
+export default function Home(){
+  return <div><h2>Witaj w Sklepiku</h2><p>Strona główna</p></div>;
+}
+
+
+--------------------------------------------
+import { useLoaderData, Link, useNavigation } from 'react-router-dom';
+import { fetchProducts } from '../api';
+
+export async function productsLoader({ request }) {
+  // przykład: użycie search params z request.url
+  const url = new URL(request.url);
+  const params = url.searchParams.toString();
+  const products = await fetchProducts(params);
+  return products;
+}
+
+export default function Products(){
+  const products = useLoaderData();
+  const navigation = useNavigation();
+  if (navigation.state === 'loading') return <div>Ładowanie listy...</div>;
+  return (
+    <div>
+      <h2>Lista produktów</h2>
+      <ul>
+        {products.map(p => (
+          <li key={p.id}>
+            <Link to={`/products/${p.id}`}>{p.name} — {p.price} zł</Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+
+import { useLoaderData } from 'react-router-dom';
+import { fetchProductById } from '../api';
+
+export async function productLoader({ params }) {
+  const product = await fetchProductById(params.id);
+  return product;
+}
+
+export default function ProductDetail(){
+  const product = useLoaderData();
+  return (
+    <div>
+      <h2>{product.name}</h2>
+      <p>Kategoria: {product.category}</p>
+      <p>Cena: {product.price} zł</p>
+      <form method="post" action="/cart">
+        <input type="hidden" name="id" value={product.id}/>
+        <button type="submit">Dodaj do koszyka</button>
+      </form>
+    </div>
+  );
+}
+
+
+-------------------------------------------
+import { redirect } from 'react-router-dom';
+
+export async function cartAction({ request }) {
+  const form = await request.formData();
+  const id = form.get('id');
+  const op = form.get('op') || 'add';
+  let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+  if (op === 'add') {
+    cart.push({ id, qty: 1 });
+  } else if (op === 'remove') {
+    cart = cart.filter(item => item.id !== id);
+  }
+  localStorage.setItem('cart', JSON.stringify(cart));
+  return redirect('/cart');
+}
+
+export default function Cart(){
+  const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+  return (
+    <div>
+      <h2>Koszyk</h2>
+      {cart.length === 0 ? <p>Pusty</p> :
+        <ul>{cart.map(c => <li key={c.id}>Produkt: {c.id} — ilość: {c.qty}
+          <form method="post" style={{display:'inline'}}>
+            <input type="hidden" name="id" value={c.id}/>
+            <input type="hidden" name="op" value="remove"/>
+            <button type="submit">Usuń</button>
+          </form>
+        </li>)}</ul>
+      }
+    </div>
+  );
+}
+
+
+------------------------
+import { useNavigate } from 'react-router-dom';
+
+export default function Login(){
+  const nav = useNavigate();
+  function login(e){
+    e.preventDefault();
+    // prosty "token"
+    localStorage.setItem('token', 'admintoken');
+    nav('/admin');
+  }
+  return (
+    <div>
+      <h2>Login</h2>
+      <form onSubmit={login}>
+        <button>Zaloguj jako admin</button>
+      </form>
+    </div>
+  );
+}
+
+
+-------------------------------------------------------
+export default function Admin(){
+  return (
+    <div>
+      <h2>Panel Admina</h2>
+      <p>Tutaj tylko dla zalogowanych.</p>
+      <button onClick={() => { localStorage.removeItem('token'); alert('Wylogowano'); }}>Wyloguj</button>
+    </div>
+  );
+}
+
+
+------------------------------------------
+import { useSearchParams } from 'react-router-dom';
+import { fetchProducts } from '../api';
+import { useEffect, useState } from 'react';
+
+export default function Search() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [results, setResults] = useState([]);
+  useEffect(() => {
+    const q = searchParams.get('q') || '';
+    fetchProducts(q).then(setResults);
+  }, [searchParams]);
+  return (
+    <div>
+      <h2>Szukaj</h2>
+      <input
+        value={searchParams.get('q') || ''}
+        onChange={e => setSearchParams({ q: e.target.value })}
+        placeholder="Szukaj..."
+      />
+      <ul>{results.map(r => <li key={r.id}>{r.name}</li>)}</ul>
+    </div>
+  );
+}
+
+
