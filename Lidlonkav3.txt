@@ -1,0 +1,327 @@
+{
+  "name": "sklepik-lidlronka",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.14.0"
+  },
+  "scripts": {
+    "start": "vite"
+  }
+}
+
+export async function fetchProducts(queryParams = '') {
+  const products = [
+    { id: '1', name: 'Chleb', price: 3.5, category: 'Piekarnia' },
+    { id: '2', name: 'Mleko', price: 2.0, category: 'Nabiał' },
+    { id: '3', name: 'Masło', price: 5.0, category: 'Nabiał' }
+  ];
+  return new Promise((res) => setTimeout(() => res(products), 300));
+}
+
+export async function fetchProductById(id) {
+  const all = await fetchProducts();
+  const p = all.find(x => x.id === id);
+  if (!p) throw new Response("Not Found", { status: 404 });
+  return p;
+}
+
+import { NavLink } from 'react-router-dom';
+export default function Header() {
+  return (
+    <header>
+      <h1>Sklepik Lidlronka</h1>
+      <nav>
+        <NavLink to="/" end>Home</NavLink> |{' '}
+        <NavLink to="/products">Produkty</NavLink> |{' '}
+        <NavLink to="/cart">Koszyk</NavLink> |{' '}
+        <NavLink to="/admin">Admin</NavLink>
+      </nav>
+    </header>
+  );
+}
+
+export default function Footer(){ return <footer>© Sklepik</footer>; }
+
+export default function ErrorElement({ error }) {
+  return (
+    <div>
+      <h2>Coś poszło nie tak</h2>
+      <pre>{error?.message || String(error)}</pre>
+    </div>
+  );
+}
+
+import { Outlet } from 'react-router-dom';
+import Header from './components/Header';
+import Footer from './components/Footer';
+export default function App(){
+  return (
+    <>
+      <Header/>
+      <main><Outlet/></main>
+      <Footer/>
+    </>
+  );
+}
+
+export default function Home(){
+  return <div><h2>Witaj w Sklepiku</h2><p>Strona główna</p></div>;
+}
+
+import { useLoaderData, Link, useNavigation } from 'react-router-dom';
+import { fetchProducts } from '../api';
+export async function productsLoader({ request }) {
+  const url = new URL(request.url);
+  const params = url.searchParams.toString();
+  const products = await fetchProducts(params);
+  return products;
+}
+export default function Products(){
+  const products = useLoaderData();
+  const navigation = useNavigation();
+  if (navigation.state === 'loading') return <div>Ładowanie listy...</div>;
+  return (
+    <div>
+      <h2>Lista produktów</h2>
+      <ul>
+        {products.map(p => (
+          <li key={p.id}>
+            <Link to={`/products/${p.id}`}>{p.name} — {p.price} zł</Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+import { useLoaderData } from 'react-router-dom';
+import { fetchProductById } from '../api';
+export async function productLoader({ params }) {
+  const product = await fetchProductById(params.id);
+  return product;
+}
+export default function ProductDetail(){
+  const product = useLoaderData();
+  return (
+    <div>
+      <h2>{product.name}</h2>
+      <p>Kategoria: {product.category}</p>
+      <p>Cena: {product.price} zł</p>
+      <form method="post" action="/cart">
+        <input type="hidden" name="id" value={product.id}/>
+        <button type="submit">Dodaj do koszyka</button>
+      </form>
+    </div>
+  );
+}
+
+import { redirect } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { fetchProducts } from '../api';
+export async function cartAction({ request }) {
+  const form = await request.formData();
+  const id = form.get('id');
+  const op = form.get('op') || 'add';
+  let cart = JSON.parse(localStorage.getItem('cart') || '[]');
+  if (op === 'add') {
+    cart.push({ id, qty: 1 });
+  } else if (op === 'remove') {
+    cart = cart.filter(item => item.id !== id);
+  }
+  localStorage.setItem('cart', JSON.stringify(cart));
+  return redirect('/cart');
+}
+export default function Cart() {
+  const [cart, setCart] = useState([]);
+  const [coupon, setCoupon] = useState(localStorage.getItem('coupon') || '');
+  const [discount, setDiscount] = useState(0);
+  const [products, setProducts] = useState([]);
+  const COUPONS = {
+    RABAT10: { type: 'percent', value: 10 },
+    TANI5: { type: 'amount', value: 5 },
+  };
+  useEffect(() => {
+    const c = JSON.parse(localStorage.getItem('cart') || '[]');
+    setCart(c);
+    fetchProducts().then(setProducts);
+    const code = localStorage.getItem('coupon');
+    if (code && COUPONS[code]) setDiscount(COUPONS[code]);
+  }, []);
+  const total = cart.reduce((sum, c) => {
+    const product = products.find(p => p.id === c.id);
+    return sum + (product ? product.price * c.qty : 0);
+  }, 0);
+  const applyCoupon = () => {
+    const code = coupon.trim().toUpperCase();
+    if (COUPONS[code]) {
+      localStorage.setItem('coupon', code);
+      setDiscount(COUPONS[code]);
+      alert('Kupon zastosowany!');
+    } else {
+      localStorage.removeItem('coupon');
+      setDiscount(0);
+      alert('Nieprawidłowy kod kuponu');
+    }
+  };
+  const removeCoupon = () => {
+    localStorage.removeItem('coupon');
+    setCoupon('');
+    setDiscount(0);
+    alert('Kupon usunięty');
+  };
+  const finalTotal =
+    discount && discount.type === 'percent'
+      ? total * (1 - discount.value / 100)
+      : discount && discount.type === 'amount'
+      ? Math.max(0, total - discount.value)
+      : total;
+  return (
+    <div>
+      <h2>Koszyk</h2>
+      {cart.length === 0 ? (
+        <p>Pusty</p>
+      ) : (
+        <ul>
+          {cart.map(c => {
+            const p = products.find(p => p.id === c.id);
+            return (
+              <li key={c.id}>
+                Produkt: {p ? p.name : c.id} — ilość: {c.qty} — cena: {p ? p.price : '?'} zł
+                <form method="post" style={{ display: 'inline' }}>
+                  <input type="hidden" name="id" value={c.id} />
+                  <input type="hidden" name="op" value="remove" />
+                  <button type="submit">Usuń</button>
+                </form>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <hr />
+      <div>
+        <label>
+          Kod rabatowy:{' '}
+          <input
+            value={coupon}
+            onChange={e => setCoupon(e.target.value)}
+            placeholder="np. RABAT10"
+          />
+        </label>
+        <button onClick={applyCoupon}>Zastosuj</button>
+        {discount ? <button onClick={removeCoupon}>Usuń kupon</button> : null}
+      </div>
+      <p>Suma: {total.toFixed(2)} zł</p>
+      {discount ? (
+        <p>
+          Rabat: {discount.type === 'percent'
+            ? `${discount.value}%`
+            : `${discount.value} zł`}
+        </p>
+      ) : null}
+      <h3>Do zapłaty: {finalTotal.toFixed(2)} zł</h3>
+    </div>
+  );
+}
+
+import { useNavigate } from 'react-router-dom';
+export default function Login(){
+  const nav = useNavigate();
+  function login(e){
+    e.preventDefault();
+    localStorage.setItem('token', 'admintoken');
+    nav('/admin');
+  }
+  return (
+    <div>
+      <h2>Login</h2>
+      <form onSubmit={login}>
+        <button>Zaloguj jako admin</button>
+      </form>
+    </div>
+  );
+}
+
+export default function Admin(){
+  return (
+    <div>
+      <h2>Panel Admina</h2>
+      <p>Tutaj tylko dla zalogowanych.</p>
+      <button onClick={() => { localStorage.removeItem('token'); alert('Wylogowano'); }}>Wyloguj</button>
+    </div>
+  );
+}
+
+import { useSearchParams } from 'react-router-dom';
+import { fetchProducts } from '../api';
+import { useEffect, useState } from 'react';
+export default function Search() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [results, setResults] = useState([]);
+  useEffect(() => {
+    const q = searchParams.get('q') || '';
+    fetchProducts(q).then(setResults);
+  }, [searchParams]);
+  return (
+    <div>
+      <h2>Szukaj</h2>
+      <input
+        value={searchParams.get('q') || ''}
+        onChange={e => setSearchParams({ q: e.target.value })}
+        placeholder="Szukaj..."
+      />
+      <ul>{results.map(r => <li key={r.id}>{r.name}</li>)}</ul>
+    </div>
+  );
+}
+
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import App from './App';
+import Home from './routes/Home';
+import Products, { productsLoader } from './routes/Products';
+import ProductDetail, { productLoader } from './routes/ProductDetail';
+import Cart, { cartAction } from './routes/Cart';
+import Login from './routes/Login';
+import ErrorElement from './components/ErrorElement';
+import './root.css';
+const Admin = React.lazy(() => import('./routes/Admin'));
+async function adminLoader() {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    throw new Response("Unauthorized", { status: 401 });
+  }
+  return null;
+}
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <App/>,
+    errorElement: <ErrorElement/>,
+    children: [
+      { index: true, element: <Home/> },
+      { path: 'products', element: <Products/>, loader: productsLoader },
+      { path: 'products/:id', element: <ProductDetail/>, loader: productLoader },
+      { path: 'cart', element: <Cart/>, action: cartAction },
+      { path: 'login', element: <Login/> },
+      {
+        path: 'admin',
+        element: (
+          <React.Suspense fallback={<div>Ładowanie (admin)...</div>}>
+            <Admin/>
+          </React.Suspense>
+        ),
+        loader: adminLoader
+      },
+      { path: 'search', element: React.createElement(require('./routes/Search').default) }
+    ]
+  }
+]);
+createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <RouterProvider router={router}/>
+  </React.StrictMode>
+);
