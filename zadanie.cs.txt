@@ -1,0 +1,92 @@
+using System;
+
+namespace TablicaProgram
+{
+    class Tablica
+    {
+        private int[] liczby;
+        private int ilosc;
+        public Tablica(int rozmiar)
+        {
+            liczby = new int[rozmiar];
+            ilosc = rozmiar;
+            Random rand = new Random();
+            for (int i = 0; i < ilosc; i++)
+            {
+                liczby[i] = rand.Next(-10, 51);
+            }
+        }
+        public void Wyswietl()
+        {
+            Console.WriteLine("Zawartość tablicy:");
+            for (int i = 0; i < ilosc; i++)
+            {
+                Console.WriteLine($"{i}: {liczby[i]}");
+            }
+            Console.WriteLine();
+        }
+        public int Wyszukaj(int wartosc)
+        {
+            for (int i = 0; i < ilosc; i++)
+            {
+                if (liczby[i] == wartosc)
+                    return i;
+            }
+            return -1;
+        }
+        public int WyswietlNieparzyste()
+        {
+            int licznik = 0;
+            Console.WriteLine("Liczby nieparzyste w tablicy:");
+            for (int i = 0; i < ilosc; i++)
+            {
+                if (liczby[i] % 2 != 0)
+                {
+                    Console.Write(liczby[i] + " ");
+                    licznik++;
+                }
+            }
+            Console.WriteLine();
+            Console.WriteLine($"Ilość liczb nieparzystych: {licznik}\n");
+            return licznik;
+        }
+        public double Srednia()
+        {
+            if (ilosc == 0) return 0;
+            int suma = 0;
+            for (int i = 0; i < ilosc; i++)
+                suma += liczby[i];
+            return (double)suma / ilosc;
+        }
+    }
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+            Console.WriteLine("=== Program operujący na tablicy liczb całkowitych ===\n");
+            Tablica tablica = new Tablica(20);
+            tablica.Wyswietl();
+            Console.Write("Podaj wartość do wyszukania: ");
+            int wartosc;
+            while (!int.TryParse(Console.ReadLine(), out wartosc))
+            {
+                Console.Write("Błędna wartość, podaj liczbę całkowitą: ");
+            }
+            int indeks = tablica.Wyszukaj(wartosc);
+            if (indeks != -1)
+                Console.WriteLine($"Wartość {wartosc} znaleziona na pozycji {indeks}.");
+            else
+                Console.WriteLine($"Wartość {wartosc} nie została znaleziona w tablicy.");
+
+            Console.WriteLine();
+            tablica.WyswietlNieparzyste();
+            double srednia = tablica.Srednia();
+            Console.WriteLine($"Średnia arytmetyczna wszystkich elementów: {srednia:F2}");
+
+            Console.WriteLine("\n=== Koniec działania programu ===");
+            Console.ReadKey();
+        }
+    }
+}
+
