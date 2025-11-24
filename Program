@@ -1,0 +1,128 @@
+#include <iostream>
+#include <cmath>
+#include <string>
+
+using namespace std;
+
+double A, B, C, DELTA, X1, X2;
+char WYBOR;
+string TYP_ROWNANIA;
+
+void PobierzDane();
+void Obliczenia();
+void Wyniki();
+void Zakoncz();
+
+int main() {
+    do {
+        cout << "\n=== ROZWIĄZYWANIE RÓWNANIA KWADRATOWEGO ===" << endl;
+        cout << "Postać równania: A*x² + B*x + C = 0" << endl;
+        cout << "1. Pobierz dane (A, B, C)" << endl;
+        cout << "2. Wykonaj obliczenia" << endl;
+        cout << "3. Wyświetl wyniki" << endl;
+        cout << "4. Zakończ program" << endl;
+        cout << "Wybierz opcję (1-4): ";
+        
+        cin >> WYBOR;
+        
+        switch(WYBOR) {
+            case '1': PobierzDane(); break;
+            case '2': Obliczenia(); break;
+            case '3': Wyniki(); break;
+            case '4': Zakoncz(); break;
+            default: cout << "Błędny wybór!" << endl;
+        }
+    } while(WYBOR != '4');
+    
+    return 0;
+}
+
+void PobierzDane() {
+    double a_temp, b_temp, c_temp;
+    
+    cout << "Podaj współczynnik A: ";
+    cin >> a_temp;
+    cout << "Podaj współczynnik B: ";
+    cin >> b_temp;
+    cout << "Podaj współczynnik C: ";
+    cin >> c_temp;
+    
+    A = a_temp;
+    B = b_temp;
+    C = c_temp;
+    
+    cout << "Dane pobrano pomyślnie: A=" << A << " B=" << B << " C=" << C << endl;
+}
+
+void Obliczenia() {
+    if (A == 0 && B == 0 && C == 0) {
+        cout << "Najpierw pobierz dane (opcja 1)!" << endl;
+        return;
+    }
+    
+    DELTA = B * B - 4 * A * C;
+    
+    if (A == 0) {
+        if (B == 0) {
+            if (C == 0) {
+                TYP_ROWNANIA = "tozsamosciowe";
+                X1 = 0;
+                X2 = 0;
+            } else {
+                TYP_ROWNANIA = "sprzeczne";
+                X1 = 0;
+                X2 = 0;
+            }
+        } else {
+            TYP_ROWNANIA = "liniowe";
+            X1 = -C / B;
+            X2 = X1;
+        }
+    } else {
+        if (DELTA > 0) {
+            TYP_ROWNANIA = "dwa_pierwiastki";
+            X1 = (-B - sqrt(DELTA)) / (2 * A);
+            X2 = (-B + sqrt(DELTA)) / (2 * A);
+        } else if (DELTA == 0) {
+            TYP_ROWNANIA = "jeden_pierwiastek";
+            X1 = -B / (2 * A);
+            X2 = X1;
+        } else {
+            TYP_ROWNANIA = "brak_rzeczywistych";
+            X1 = 0;
+            X2 = 0;
+        }
+    }
+    
+    cout << "Obliczenia wykonane pomyślnie!" << endl;
+}
+
+void Wyniki() {
+    cout << "\n=== WYNIKI ===" << endl;
+    cout << "Równanie: " << A << "*x² + " << B << "*x + " << C << " = 0" << endl;
+    cout << "Delta = " << DELTA << endl;
+    
+    if (TYP_ROWNANIA == "dwa_pierwiastki") {
+        cout << "Dwa pierwiastki rzeczywiste:" << endl;
+        cout << "X1 = " << X1 << endl;
+        cout << "X2 = " << X2 << endl;
+    } else if (TYP_ROWNANIA == "jeden_pierwiastek") {
+        cout << "Jeden pierwiastek podwójny:" << endl;
+        cout << "X0 = " << X1 << endl;
+    } else if (TYP_ROWNANIA == "brak_rzeczywistych") {
+        cout << "Brak pierwiastków rzeczywistych" << endl;
+    } else if (TYP_ROWNANIA == "liniowe") {
+        cout << "Równanie liniowe - jeden pierwiastek:" << endl;
+        cout << "X = " << X1 << endl;
+    } else if (TYP_ROWNANIA == "sprzeczne") {
+        cout << "Równanie sprzeczne - brak rozwiązań" << endl;
+    } else if (TYP_ROWNANIA == "tozsamosciowe") {
+        cout << "Równanie tożsamościowe - nieskończenie wiele rozwiązań" << endl;
+    } else {
+        cout << "Najpierw wykonaj obliczenia (opcja 2)!" << endl;
+    }
+}
+
+void Zakoncz() {
+    cout << "Dziękuję za korzystanie z programu!" << endl;
+}
