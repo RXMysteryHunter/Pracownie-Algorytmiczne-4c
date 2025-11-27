@@ -1,0 +1,152 @@
+
+
+// Zadanie 1: Komponent Wrapper
+const Wrapper = styled.div`
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  background-color: #f0f0f0;
+  padding: 20px;
+`;
+
+// Zadanie 2: Komponent Title
+const Title = styled.h1`
+  color: navy;
+  text-align: center;
+  margin-bottom: 20px;
+  
+  &:hover {
+    color: red;
+  }
+`;
+
+// Zadanie 3: Komponent Card
+const Card = styled.div`
+  border: 2px solid ${props => props.$active ? 'green' : 'grey'};
+  padding: 20px;
+  margin: 10px 0;
+  box-shadow: ${props => props.$active ? '0 4px 8px rgba(0,0,0,0.3)' : '0 2px 4px rgba(0,0,0,0.1)'};
+  transition: all 0.3s ease;
+  border-radius: 8px;
+`;
+
+// Zadanie 4: Button i AlertButton
+const Button = styled.button`
+  padding: 10px 20px;
+  border-radius: 5px;
+  border: none;
+  margin: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  
+  &:hover {
+    opacity: 0.8;
+  }
+`;
+
+const AlertButton = styled(Button)`
+  background-color: red;
+  color: white;
+  font-weight: bold;
+`;
+
+// Zadanie 5: Komponent Input
+const Input = styled.input`
+  border: 1px solid ${props => props.$hasError ? 'red' : 'grey'};
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin: 5px;
+  width: 200px;
+  
+  &:focus {
+    outline: none;
+    border-color: ${props => props.$hasError ? 'red' : '#3498db'};
+  }
+`;
+
+// Zadanie 6: GridContainer
+const GridContainer = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin: 20px 0;
+  
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+`;
+
+// Zadanie 7: Animacja Spinner
+const rotate = keyframes`
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+`;
+
+const Spinner = styled.div`
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: ${rotate} 1s linear infinite;
+  margin: 20px auto;
+`;
+
+// Zadanie 8: PasswordInput z .attrs
+const PasswordInput = styled.input.attrs({
+  type: 'password',
+  placeholder: 'Wprowadź hasło'
+})`
+  padding: 8px 12px;
+  background-color: #e6f7ff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin: 5px;
+  width: 200px;
+`;
+
+// Zadanie 9: Menu nawigacyjne
+const Nav = styled.nav`
+  display: flex;
+  background-color: #333;
+  padding: 10px;
+  margin: 20px 0;
+  border-radius: 5px;
+`;
+
+const NavItem = styled.a`
+  color: white;
+  text-decoration: none;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  
+  &:hover {
+    background-color: #555;
+    border-radius: 3px;
+  }
+  
+  & + & {
+    margin-left: 0;
+  }
+  
+  &:not(:last-child) {
+    margin-right: 10px;
+  }
+`;
+
+// Zadanie 10: Globalny wrapper z trybem ciemnym
+const GlobalWrapper = styled.div`
+  background-color: ${props => props.$isDarkMode ? '#1a1a1a' : '#ffffff'};
+  color: ${props => props.$isDarkMode ? '#ffffff' : '#000000'};
+  min-height: 100vh;
+  padding: 20px;
+  
+  * {
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+`;
