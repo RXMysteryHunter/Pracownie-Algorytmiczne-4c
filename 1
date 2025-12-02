@@ -1,0 +1,99 @@
+using System;
+using System.IO;
+
+namespace ZAD3_B_POJEMNIK_Z_KULKAMI
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            try
+            {
+                // Czytanie zawartości pojemnika z pliku
+                string[] lines = File.ReadAllLines("kulki1.txt");
+                
+                if (lines.Length < 2)
+                {
+                    Console.WriteLine("BŁĄD: Plik jest za krótki.");
+                    return;
+                }
+
+                // Parsowanie wymiarów
+                if (!int.TryParse(lines[0], out int W) || !int.TryParse(lines[1], out int S))
+                {
+                    Console.WriteLine("BŁĄD: Nieprawidłowy format wymiarów.");
+                    return;
+                }
+
+                // Sprawdzanie poprawności wysokości i szerokości
+                if (W <= 0 || S <= 0)
+                {
+                    Console.WriteLine("BŁĄD: Wymiary muszą być dodatnie.");
+                    return;
+                }
+
+                if (W * S != 100)
+                {
+                    Console.WriteLine($"BŁĄD: W * S = {W * S}, a powinno być 100.");
+                    return;
+                }
+
+                // Sprawdzanie liczby wierszy z kulkami
+                if (lines.Length - 2 != W)
+                {
+                    Console.WriteLine($"BŁĄD: Oczekiwano {W} wierszy kulek, a jest {lines.Length - 2}.");
+                    return;
+                }
+
+                // Sprawdzanie poprawności kulek
+                bool blad = false;
+                int liczbaKulek = 0;
+
+                for (int i = 0; i < W; i++)
+                {
+                    string[] kulki = lines[i + 2].Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                    
+                    if (kulki.Length != S)
+                    {
+                        Console.WriteLine($"BŁĄD: W wierszu {i + 1} jest {kulki.Length} kulek, a powinno być {S}.");
+                        blad = true;
+                        continue;
+                    }
+
+                    for (int j = 0; j < kulki.Length; j++)
+                    {
+                        if (!int.TryParse(kulki[j], out int kulka))
+                        {
+                            Console.WriteLine($"BŁĄD: W wierszu {i + 1}, kolumna {j + 1}: '{kulki[j]}' nie jest liczbą.");
+                            blad = true;
+                        }
+                        else if (kulka < 1 || kulka > 999)
+                        {
+                            Console.WriteLine($"BŁĄD: W wierszu {i + 1}, kolumna {j + 1}: {kulka} jest poza zakresem (1-999).");
+                            blad = true;
+                        }
+                        liczbaKulek++;
+                    }
+                }
+
+                if (!blad)
+                {
+                    Console.WriteLine("Dane w pliku są POPRAWNE.");
+                    Console.WriteLine($"Wymiary: W={W}, S={S}");
+                    Console.WriteLine($"Liczba kulek: {liczbaKulek}");
+                    Console.WriteLine($"Sprawdzenie: W * S = {W * S}");
+                }
+            }
+            catch (FileNotFoundException)
+            {
+                Console.WriteLine("BŁĄD: Plik kulki1.txt nie istnieje.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"BŁĄD: {ex.Message}");
+            }
+
+            Console.ReadKey();
+        }
+    }
+}
