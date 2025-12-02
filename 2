@@ -1,0 +1,80 @@
+using System;
+using System.IO;
+using System.Collections.Generic;
+
+namespace ZAD3_C_POJEMNIK_Z_KULKAMI
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            try
+            {
+                // Czytanie poprawnych danych z pliku
+                string[] lines = File.ReadAllLines("kulki1.txt");
+                
+                int W = int.Parse(lines[0]); // wysokość
+                int S = int.Parse(lines[1]); // szerokość
+
+                // Tworzenie listy kulek
+                List<int> listaKulek = new List<int>();
+
+                for (int i = 0; i < W; i++)
+                {
+                    string[] kulki = lines[i + 2].Split(new char[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                    for (int j = 0; j < S; j++)
+                    {
+                        listaKulek.Add(int.Parse(kulki[j]));
+                    }
+                }
+
+                // Sortowanie rosnące listy
+                listaKulek.Sort();
+
+                // Zapis do pliku posortowanych kulek w postaci macierzy 5 x W
+                // UWAGA: Z treści wynika, że macierz ma być 5 x W, ale 5*W musi równać się 100
+                // więc W = 20, S = 5 (bo 5*20=100)
+                int nowaWysokosc = 5;
+                int nowaSzerokosc = 20;
+
+                using (StreamWriter sw = new StreamWriter("kulki2.txt"))
+                {
+                    int index = 0;
+                    for (int i = 0; i < nowaWysokosc; i++)
+                    {
+                        for (int j = 0; j < nowaSzerokosc; j++)
+                        {
+                            sw.Write($"{listaKulek[index]} ");
+                            index++;
+                        }
+                        sw.WriteLine();
+                    }
+                }
+
+                Console.WriteLine("Kulki zostały posortowane i zapisane do pliku kulki2.txt");
+                Console.WriteLine($"Wymiary macierzy: {nowaWysokosc} x {nowaSzerokosc}");
+                
+                // Wyświetlenie fragmentu posortowanych danych
+                Console.WriteLine("\nPierwsze 20 posortowanych kulek:");
+                for (int i = 0; i < 20 && i < listaKulek.Count; i++)
+                {
+                    Console.Write($"{listaKulek[i]} ");
+                }
+            }
+            catch (FileNotFoundException)
+            {
+                Console.WriteLine("BŁĄD: Plik kulki1.txt nie istnieje.");
+            }
+            catch (FormatException)
+            {
+                Console.WriteLine("BŁĄD: Nieprawidłowy format danych w pliku.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"BŁĄD: {ex.Message}");
+            }
+
+            Console.ReadKey();
+        }
+    }
+}
