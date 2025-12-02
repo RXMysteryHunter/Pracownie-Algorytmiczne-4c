@@ -1,0 +1,64 @@
+using System;
+using System.IO;
+
+namespace ZAD3_A_POJEMNIK_Z_KULKAMI
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            // Losowanie wymiarów pojemnika
+            Random rand = new Random();
+            int W = rand.Next(2, 21); // wysokość od 2 do 20 (bo 5*20=100)
+            int S = 100 / W; // szerokość obliczona tak, aby W * S = 100
+            
+            // Sprawdzenie czy W jest dzielnikiem 100
+            while (100 % W != 0)
+            {
+                W = rand.Next(2, 21);
+                S = 100 / W;
+            }
+
+            // Losowanie kulek (liczby całkowite od 1 do 999)
+            int[,] kulki = new int[W, S];
+            for (int i = 0; i < W; i++)
+            {
+                for (int j = 0; j < S; j++)
+                {
+                    kulki[i, j] = rand.Next(1, 1000);
+                }
+            }
+
+            // Wyświetlanie zawartości pojemnika
+            Console.WriteLine($"W = {W}");
+            Console.WriteLine($"S = {S}");
+            Console.WriteLine("Zawartość pojemnika:");
+            for (int i = 0; i < W; i++)
+            {
+                for (int j = 0; j < S; j++)
+                {
+                    Console.Write($"{kulki[i, j],4} ");
+                }
+                Console.WriteLine();
+            }
+
+            // Zapis do pliku tekstowego
+            using (StreamWriter sw = new StreamWriter("kulki1.txt"))
+            {
+                sw.WriteLine(W);
+                sw.WriteLine(S);
+                for (int i = 0; i < W; i++)
+                {
+                    for (int j = 0; j < S; j++)
+                    {
+                        sw.Write($"{kulki[i, j]} ");
+                    }
+                    sw.WriteLine();
+                }
+            }
+
+            Console.WriteLine("\nDane zapisane do pliku kulki1.txt");
+            Console.ReadKey();
+        }
+    }
+}
